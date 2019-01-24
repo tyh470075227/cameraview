@@ -20,6 +20,12 @@ import android.Manifest;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
+import android.graphics.Rect;
+import android.graphics.YuvImage;
+import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -40,11 +46,13 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.google.android.cameraview.AspectRatio;
 import com.google.android.cameraview.CameraView;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -84,20 +92,28 @@ public class MainActivity extends AppCompatActivity implements
             R.string.flash_on,
     };
 
+    byte[] mData;
+    Camera.Size mSize;
+
     private int mCurrentFlash;
 
     private CameraView mCameraView;
 
+    private ImageView mImageView;
+
     private Handler mBackgroundHandler;
+
+    private FastYUVtoRGB mFastYUVtoRGB;
 
     private View.OnClickListener mOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             switch (v.getId()) {
                 case R.id.take_picture:
-                    if (mCameraView != null) {
-                        mCameraView.takePicture();
-                    }
+//                    if (mCameraView != null) {
+//                        mCameraView.takePicture();
+//                    }
+                    mImageView.setImageBitmap(mFastYUVtoRGB.convertYUVtoRGB(mData, mSize.width, mSize.height));
                     break;
             }
         }
@@ -107,10 +123,14 @@ public class MainActivity extends AppCompatActivity implements
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mFastYUVtoRGB = new FastYUVtoRGB(getApplicationContext());
+
         mCameraView = (CameraView) findViewById(R.id.camera);
         if (mCameraView != null) {
             mCameraView.addCallback(mCallback);
         }
+        mImageView = (ImageView) findViewById(R.id.image);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.take_picture);
         if (fab != null) {
             fab.setOnClickListener(mOnClickListener);
@@ -164,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-            @NonNull int[] grantResults) {
+                                           @NonNull int[] grantResults) {
         switch (requestCode) {
             case REQUEST_CAMERA_PERMISSION:
                 if (permissions.length != 1 || grantResults.length != 1) {
@@ -277,7 +297,23 @@ public class MainActivity extends AppCompatActivity implements
             });
         }
 
+        @Override
+        public void onPreviewFrame(CameraView cameraView, byte[] data, Camera.Size size) {
+            mData = data;
+            mSize = size;
+        }
     };
+
+    private Bitmap yuvToRgb(byte[] data, Camera.Size size) {
+        if (mData == null || size == null) {
+            return null;
+        }
+        YuvImage image = new YuvImage(data, ImageFormat.NV21, size.width, size.height, null);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        image.compressToJpeg(new Rect(0, 0, size.width, size.height), 100, outputStream);
+        byte[] bytes = outputStream.toByteArray();
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+    }
 
     public static class ConfirmationDialogFragment extends DialogFragment {
 
@@ -287,7 +323,7 @@ public class MainActivity extends AppCompatActivity implements
         private static final String ARG_NOT_GRANTED_MESSAGE = "not_granted_message";
 
         public static ConfirmationDialogFragment newInstance(@StringRes int message,
-                String[] permissions, int requestCode, @StringRes int notGrantedMessage) {
+                                                             String[] permissions, int requestCode, @StringRes int notGrantedMessage) {
             ConfirmationDialogFragment fragment = new ConfirmationDialogFragment();
             Bundle args = new Bundle();
             args.putInt(ARG_MESSAGE, message);

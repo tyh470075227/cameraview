@@ -19,6 +19,7 @@ package com.google.android.cameraview;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.hardware.Camera;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -97,13 +98,13 @@ public class CameraView extends FrameLayout {
         // Internal setup
         final PreviewImpl preview = createPreviewImpl(context);
         mCallbacks = new CallbackBridge();
-        if (Build.VERSION.SDK_INT < 21) {
+//        if (Build.VERSION.SDK_INT < 21) {
             mImpl = new Camera1(mCallbacks, preview);
-        } else if (Build.VERSION.SDK_INT < 23) {
-            mImpl = new Camera2(mCallbacks, preview, context);
-        } else {
-            mImpl = new Camera2Api23(mCallbacks, preview, context);
-        }
+//        } else if (Build.VERSION.SDK_INT < 23) {
+//            mImpl = new Camera2(mCallbacks, preview, context);
+//        } else {
+//            mImpl = new Camera2Api23(mCallbacks, preview, context);
+//        }
         // Attributes
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.CameraView, defStyleAttr,
                 R.style.Widget_CameraView);
@@ -449,6 +450,13 @@ public class CameraView extends FrameLayout {
             }
         }
 
+        @Override
+        public void onPreviewFrame(byte[] data, Camera.Size size) {
+            for (Callback callback : mCallbacks) {
+                callback.onPreviewFrame(CameraView.this, data,size);
+            }
+        }
+
         public void reserveRequestLayoutOnOpen() {
             mRequestLayoutOnOpen = true;
         }
@@ -534,6 +542,9 @@ public class CameraView extends FrameLayout {
          * @param data       JPEG data.
          */
         public void onPictureTaken(CameraView cameraView, byte[] data) {
+        }
+
+        public void onPreviewFrame(CameraView cameraView, byte[] data, Camera.Size size) {
         }
     }
 

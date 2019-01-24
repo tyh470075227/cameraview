@@ -17,6 +17,7 @@
 package com.google.android.cameraview;
 
 import android.annotation.SuppressLint;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.Build;
@@ -306,6 +307,12 @@ class Camera1 extends CameraViewImpl {
         }
         adjustCameraParameters();
         mCamera.setDisplayOrientation(calcDisplayOrientation(mDisplayOrientation));
+        mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+            @Override
+            public void onPreviewFrame(byte[] bytes, Camera camera) {
+                mCallback.onPreviewFrame(bytes,camera.getParameters().getPreviewSize());
+            }
+        });
         mCallback.onCameraOpened();
     }
 
@@ -335,6 +342,7 @@ class Camera1 extends CameraViewImpl {
             mCamera.stopPreview();
         }
         mCameraParameters.setPreviewSize(size.getWidth(), size.getHeight());
+        mCameraParameters.setPreviewFormat(ImageFormat.NV21);
         mCameraParameters.setPictureSize(pictureSize.getWidth(), pictureSize.getHeight());
         mCameraParameters.setRotation(calcCameraRotation(mDisplayOrientation));
         setAutoFocusInternal(mAutoFocus);

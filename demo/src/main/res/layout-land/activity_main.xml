@@ -48,6 +48,12 @@
         android:layout_centerVertical="true"
         app:srcCompat="@drawable/ic_camera"
         app:useCompatPadding="true"
-        tools:ignore="RelativeOverlap"/>
+        tools:ignore="RelativeOverlap" />
+
+    <ImageView
+        android:id="@+id/image"
+        android:layout_width="300dp"
+        android:layout_height="200dp"
+        android:scaleType="centerInside" />
 
 </RelativeLayout>
